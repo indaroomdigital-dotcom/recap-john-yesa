@@ -207,6 +207,7 @@
 
   /* Success */
   #screen-success{padding-top:70px;}
+  #screen-error{padding-top:70px;}
   .check{
     width:64px;height:64px;
     border:1.5px solid var(--olive);
@@ -215,7 +216,10 @@
     margin-bottom:26px;
   }
   .check svg{width:26px;height:26px;}
+  .error-check{border-color:#a14a3a;}
   #screen-success .title{font-size:27px; font-weight:600; margin-bottom:14px;}
+  #screen-error .title{font-size:24px; font-weight:600; margin-bottom:14px;}
+  #screen-error p{font-size:16px; color:var(--text); line-height:1.55; max-width:290px; margin-bottom:6px;}
   #screen-success p{font-size:17px; color:var(--text); line-height:1.6; max-width:300px; margin-bottom:6px;}
   #screen-success .sub{font-size:14px; color:var(--muted); max-width:280px; margin:6px 0 26px;}
 
@@ -324,6 +328,19 @@
     <div class="title-sm" id="uploading-text">Guardando tu foto…</div>
   </div>
 
+  <!-- ERROR -->
+  <div class="screen" id="screen-error">
+    <div class="check error-check">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#a14a3a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+    <div class="title" id="error-title">No pudimos subir tu foto</div>
+    <p id="error-text">Parece que se cortó tu conexión a internet. Revisa tu señal e inténtalo de nuevo.</p>
+    <div class="btn-row">
+      <button class="btn secondary" id="btn-error-back">Volver</button>
+      <button class="btn" id="btn-error-retry">Reintentar</button>
+    </div>
+  </div>
+
   <!-- SUCCESS -->
   <div class="screen" id="screen-success">
     <div class="check">
@@ -344,7 +361,7 @@
 
 <script>
   const UPLOAD_URL = "https://script.google.com/macros/s/AKfycbz459g2SrzrqSQ2zGEU3bE6olMHhdUP3YwoqoUmnbQBDnx0SAeO--qw2V3rDnbVXKbw/exec";
-  const DRIVE_FOLDER_LINK = "https://drive.google.com/drive/folders/1cfIyqRi2w3jBKAxTDGBC0yE2NepEpt11";
+  const DRIVE_FOLDER_LINK = "https://indaroomdigital-dotcom.github.io/recap-john-yesa/album/";
 
   document.getElementById('drive-link').textContent = DRIVE_FOLDER_LINK;
 
@@ -353,6 +370,7 @@
     camera: document.getElementById('screen-camera'),
     preview: document.getElementById('screen-preview'),
     uploading: document.getElementById('screen-uploading'),
+    error: document.getElementById('screen-error'),
     success: document.getElementById('screen-success'),
   };
   function show(name){
@@ -365,6 +383,7 @@
   let stream = null;
   let capturedDataUrl = null;
   let facingMode = 'environment';
+  let retryState = { mode: null, files: null };
 
   async function startCamera(){
     document.getElementById('cam-error').style.display = 'none';
@@ -424,6 +443,76 @@
     document.getElementById('file-input').click();
   });
 
+  function fileToDataUrl(file){
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => resolve(ev.target.result);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function sendPhoto(dataUrl, timeoutMs = 20000){
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try{
+      const res = await fetch(UPLOAD_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ image: dataUrl }),
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+      try{
+        const data = await res.json();
+        return data.success !== false;
+      }catch(e){
+        return res.ok;
+      }
+    }catch(err){
+      clearTimeout(timer);
+      return false;
+    }
+  }
+
+  async function attemptSingleUpload(){
+    show('uploading');
+    document.getElementById('uploading-text').textContent = 'Guardando tu foto…';
+    const ok = await sendPhoto(capturedDataUrl);
+    if(ok){
+      document.getElementById('success-title').textContent = '¡Foto subida!';
+      show('success');
+    }else{
+      retryState = { mode: 'single', files: null };
+      document.getElementById('error-title').textContent = 'No pudimos subir tu foto';
+      document.getElementById('error-text').textContent = 'Parece que se cortó tu conexión a internet. Revisa tu señal e inténtalo de nuevo.';
+      show('error');
+    }
+  }
+
+  async function uploadMultiple(files){
+    show('uploading');
+    const uploadingText = document.getElementById('uploading-text');
+    const failed = [];
+    let done = 0;
+    for(const file of files){
+      done++;
+      uploadingText.textContent = `Guardando foto ${done} de ${files.length}…`;
+      const dataUrl = await fileToDataUrl(file);
+      const ok = await sendPhoto(dataUrl);
+      if(!ok) failed.push(file);
+    }
+    if(failed.length === 0){
+      document.getElementById('success-title').textContent = `¡${files.length} fotos subidas!`;
+      show('success');
+    }else{
+      const okCount = files.length - failed.length;
+      retryState = { mode: 'multiple', files: failed };
+      document.getElementById('error-title').textContent = 'Algunas fotos no se subieron';
+      document.getElementById('error-text').textContent = `Se guardaron ${okCount} de ${files.length}. ${failed.length} fallaron por conexión. ¿Reintentamos las que faltan?`;
+      show('error');
+    }
+  }
+
   document.getElementById('file-input').addEventListener('change', (e) => {
     const files = Array.from(e.target.files);
     e.target.value = '';
@@ -442,50 +531,19 @@
     }
   });
 
-  function fileToDataUrl(file){
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => resolve(ev.target.result);
-      reader.readAsDataURL(file);
-    });
-  }
+  document.getElementById('btn-upload').addEventListener('click', attemptSingleUpload);
 
-  async function uploadMultiple(files){
-    show('uploading');
-    const uploadingText = document.getElementById('uploading-text');
-    let done = 0;
-    for(const file of files){
-      uploadingText.textContent = `Guardando foto ${done + 1} de ${files.length}…`;
-      try{
-        const dataUrl = await fileToDataUrl(file);
-        await fetch(UPLOAD_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ image: dataUrl })
-        });
-      }catch(err){ /* seguimos con las demás */ }
-      done++;
+  document.getElementById('btn-error-retry').addEventListener('click', () => {
+    if(retryState.mode === 'single'){
+      attemptSingleUpload();
+    }else if(retryState.mode === 'multiple' && retryState.files){
+      uploadMultiple(retryState.files);
     }
-    uploadingText.textContent = 'Guardando tu foto…';
-    document.getElementById('success-title').textContent = `¡${files.length} fotos subidas!`;
-    show('success');
-  }
+  });
 
-  document.getElementById('btn-upload').addEventListener('click', async () => {
-    show('uploading');
-    document.getElementById('uploading-text').textContent = 'Guardando tu foto…';
-    try{
-      await fetch(UPLOAD_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ image: capturedDataUrl })
-      });
-      document.getElementById('success-title').textContent = '¡Foto subida!';
-      show('success');
-    }catch(err){
-      document.getElementById('success-title').textContent = '¡Foto subida!';
-      show('success');
-    }
+  document.getElementById('btn-error-back').addEventListener('click', () => {
+    retryState = { mode: null, files: null };
+    show('intro');
   });
 
   document.getElementById('btn-again').addEventListener('click', () => {
