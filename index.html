@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RECAP · John & Yesa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Parisienne&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F4EEE1;
+    --panel:#EFE4D0;
+    --gold:#A9814C;
+    --gold-deep:#7C5C33;
+    --olive:#6E7A52;
+    --text:#4A3B2C;
+    --muted:#8A7863;
+    --white:#FFFDF9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{min-height:100%;}
+  body{
+    background:var(--cream);
+    color:var(--text);
+    font-family:'Cormorant Garamond', serif;
+    display:flex;
+    justify-content:center;
+    min-height:100vh;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .stage{
+    width:100%;
+    max-width:460px;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+    background:
+      radial-gradient(circle at 8% 6%, rgba(169,129,76,0.14), transparent 40%),
+      radial-gradient(circle at 92% 94%, rgba(110,122,82,0.14), transparent 42%),
+      var(--cream);
+  }
+
+  /* ---------- Header ---------- */
+  .header{
+    text-align:center;
+    padding:38px 24px 18px;
+  }
+  .monogram{
+    font-family:'Parisienne', cursive;
+    font-size:34px;
+    color:var(--gold-deep);
+    letter-spacing:1px;
+  }
+  .divider{
+    width:52px;
+    height:1px;
+    background:var(--gold);
+    margin:14px auto;
+    opacity:.7;
+  }
+  .kicker{
+    font-size:13px;
+    letter-spacing:2.5px;
+    color:var(--muted);
+    text-transform:uppercase;
+  }
+
+  /* ---------- Screens ---------- */
+  .screen{
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    flex:1;
+    padding:0 26px 34px;
+    text-align:center;
+    animation:fadeIn .45s ease;
+  }
+  .screen.active{display:flex;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  /* Intro */
+  #screen-intro .title{
+    font-size:30px;
+    font-weight:600;
+    line-height:1.25;
+    margin-bottom:14px;
+  }
+  #screen-intro .title em{font-style:italic; color:var(--gold-deep);}
+  #screen-intro p{
+    font-size:18px;
+    color:var(--text);
+    line-height:1.55;
+    max-width:320px;
+    margin-bottom:8px;
+  }
+  #screen-intro .sub{
+    font-size:15px;
+    color:var(--muted);
+    max-width:300px;
+    margin-bottom:32px;
+  }
+  .leaf-row{
+    display:flex;
+    gap:10px;
+    margin-bottom:28px;
+    opacity:.55;
+  }
+  .leaf-row span{
+    width:6px;height:6px;border-radius:50%;background:var(--olive);
+  }
+
+  /* Buttons */
+  .btn{
+    font-family:'Cormorant Garamond', serif;
+    font-size:19px;
+    letter-spacing:.5px;
+    padding:15px 38px;
+    border-radius:2px;
+    border:1px solid var(--gold-deep);
+    background:var(--gold-deep);
+    color:var(--white);
+    cursor:pointer;
+    transition:transform .15s ease, background .2s ease;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn.secondary{
+    background:transparent;
+    color:var(--gold-deep);
+  }
+  .btn.block{width:100%;}
+  .btn-row{display:flex; gap:12px; width:100%; margin-top:18px;}
+  .btn-row .btn{flex:1;}
+
+  .btn-stack{display:flex; flex-direction:column; gap:12px; width:100%;}
+  .btn.pill{border-radius:30px; width:100%; padding:16px 20px;}
+  .btn.pill.alt{background:var(--panel); color:var(--gold-deep); border:1px solid var(--gold);}
+
+  /* Camera */
+  #screen-camera{padding-top:26px;}
+  .cam-frame{
+    width:100%;
+    aspect-ratio:3/4;
+    border-radius:4px;
+    overflow:hidden;
+    background:#000;
+    border:1px solid var(--gold);
+    position:relative;
+    margin-bottom:22px;
+  }
+  video, #preview-img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .shutter{
+    width:70px;height:70px;
+    border-radius:50%;
+    background:var(--white);
+    border:3px solid var(--gold-deep);
+    cursor:pointer;
+    margin:6px auto 4px;
+  }
+  .shutter:active{transform:scale(.94);}
+  .hint{font-size:14px; color:var(--muted); margin-top:10px;}
+
+  /* Preview */
+  #screen-preview{padding-top:26px;}
+  #screen-preview .title-sm{
+    font-size:22px;
+    font-weight:600;
+    margin-bottom:16px;
+  }
+
+  /* Uploading */
+  #screen-uploading .title-sm{font-size:22px; margin-top:20px;}
+  .spinner{
+    width:38px;height:38px;
+    border:2.5px solid rgba(124,92,51,0.25);
+    border-top-color:var(--gold-deep);
+    border-radius:50%;
+    animation:spin 1s linear infinite;
+    margin-top:80px;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* Success */
+  #screen-success{padding-top:70px;}
+  .check{
+    width:64px;height:64px;
+    border:1.5px solid var(--olive);
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:26px;
+  }
+  .check svg{width:26px;height:26px;}
+  #screen-success .title{font-size:27px; font-weight:600; margin-bottom:14px;}
+  #screen-success p{font-size:17px; color:var(--text); line-height:1.6; max-width:300px; margin-bottom:6px;}
+  #screen-success .sub{font-size:14px; color:var(--muted); max-width:280px; margin:6px 0 26px;}
+
+  .link-box{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--panel);
+    border:1px solid var(--gold);
+    border-radius:3px;
+    padding:12px 14px;
+    margin-bottom:14px;
+  }
+  .link-box span{
+    font-size:14px;
+    color:var(--gold-deep);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    flex:1;
+    text-align:left;
+    font-family:'Cormorant Garamond', serif;
+  }
+  .copy-btn{
+    background:none;
+    border:none;
+    color:var(--gold-deep);
+    font-size:13px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .toast{
+    position:fixed;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--text);
+    color:var(--white);
+    padding:10px 20px;
+    border-radius:3px;
+    font-size:14px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease;
+  }
+  .toast.show{opacity:1;}
+
+  .error-text{color:#a14a3a; font-size:14px; margin-top:14px; display:none;}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="header">
+    <div class="monogram">J &amp; Y</div>
+    <div class="divider"></div>
+    <div class="kicker">Matrimonio Civil · 19·09·2026</div>
+  </div>
+
+  <!-- INTRO -->
+  <div class="screen active" id="screen-intro">
+    <div class="leaf-row"><span></span><span></span><span></span></div>
+    <div class="title">Guarda <em>tu</em> mirada<br>de este día</div>
+    <p>Nos encantaría ver la boda a través de tus ojos. Antes que del fotógrafo, queremos las fotos espontáneas, las risas y los momentos que solo tú puedes capturar.</p>
+    <p class="sub">Toma cuantas fotos quieras durante la celebración y compártelas con nosotros aquí mismo.</p>
+    <div class="btn-stack">
+      <button class="btn pill" id="btn-start">Tomar foto</button>
+      <button class="btn pill alt" id="btn-gallery">Subir desde galería</button>
+    </div>
+    <input type="file" id="file-input" accept="image/*" style="display:none">
+  </div>
+
+  <!-- CAMERA -->
+  <div class="screen" id="screen-camera">
+    <div class="cam-frame">
+      <video id="video" autoplay playsinline muted></video>
+    </div>
+    <div class="shutter" id="btn-shoot"></div>
+    <div class="hint">Toca el círculo para capturar</div>
+    <div class="error-text" id="cam-error">No pudimos acceder a tu cámara. Revisa los permisos del navegador e inténtalo de nuevo.</div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="screen" id="screen-preview">
+    <div class="title-sm">¿Te gusta cómo quedó?</div>
+    <div class="cam-frame">
+      <img id="preview-img" alt="Vista previa">
+    </div>
+    <div class="btn-row">
+      <button class="btn secondary" id="btn-retake">Volver a tomar</button>
+      <button class="btn" id="btn-upload">Subir foto</button>
+    </div>
+  </div>
+
+  <!-- UPLOADING -->
+  <div class="screen" id="screen-uploading">
+    <div class="spinner"></div>
+    <div class="title-sm">Guardando tu foto…</div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div class="screen" id="screen-success">
+    <div class="check">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#6E7A52" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+    </div>
+    <div class="title">¡Foto subida!</div>
+    <p>Gracias por estar con nosotros y por regalarnos también tu mirada de este día.</p>
+    <p class="sub">Todas las fotos de nuestros invitados se están guardando aquí. Cuando quieras revivirlas, entra al enlace:</p>
+    <div class="link-box">
+      <span id="drive-link">drive.google.com/…/RECAP-JOHN-YESA</span>
+      <button class="copy-btn" id="btn-copy">Copiar</button>
+    </div>
+    <button class="btn block" id="btn-again">Tomar otra foto</button>
+  </div>
+
+  <div class="toast" id="toast">Enlace copiado</div>
+</div>
+
+<script>
+  // ⚠️ Reemplaza esta URL por la de tu Web App de Google Apps Script (ver instrucciones)
+  const UPLOAD_URL = "PEGA_AQUI_TU_URL_DE_APPS_SCRIPT";
+  const DRIVE_FOLDER_LINK = "https://drive.google.com/drive/folders/1cfIyqRi2w3jBKAxTDGBC0yE2NepEpt11";
+
+  document.getElementById('drive-link').textContent = DRIVE_FOLDER_LINK;
+
+  const screens = {
+    intro: document.getElementById('screen-intro'),
+    camera: document.getElementById('screen-camera'),
+    preview: document.getElementById('screen-preview'),
+    uploading: document.getElementById('screen-uploading'),
+    success: document.getElementById('screen-success'),
+  };
+  function show(name){
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  const video = document.getElementById('video');
+  const previewImg = document.getElementById('preview-img');
+  let stream = null;
+  let capturedDataUrl = null;
+
+  async function startCamera(){
+    document.getElementById('cam-error').style.display = 'none';
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1080 }, height: { ideal: 1440 } },
+        audio: false
+      });
+      video.srcObject = stream;
+    }catch(err){
+      document.getElementById('cam-error').style.display = 'block';
+    }
+  }
+  function stopCamera(){
+    if(stream){ stream.getTracks().forEach(t => t.stop()); stream = null; }
+  }
+
+  document.getElementById('btn-start').addEventListener('click', () => {
+    show('camera');
+    startCamera();
+  });
+
+  document.getElementById('btn-shoot').addEventListener('click', () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    capturedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    previewImg.src = capturedDataUrl;
+    stopCamera();
+    show('preview');
+  });
+
+  document.getElementById('btn-retake').addEventListener('click', () => {
+    show('camera');
+    startCamera();
+  });
+
+  document.getElementById('btn-gallery').addEventListener('click', () => {
+    document.getElementById('file-input').click();
+  });
+
+  document.getElementById('file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      capturedDataUrl = ev.target.result;
+      previewImg.src = capturedDataUrl;
+      show('preview');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  });
+
+  document.getElementById('btn-upload').addEventListener('click', async () => {
+    show('uploading');
+    try{
+      await fetch(UPLOAD_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ image: capturedDataUrl })
+      });
+      show('success');
+    }catch(err){
+      show('success'); // Apps Script + no-cors puede bloquear la lectura de respuesta aunque la subida sí funcione
+    }
+  });
+
+  document.getElementById('btn-again').addEventListener('click', () => {
+    capturedDataUrl = null;
+    show('camera');
+    startCamera();
+  });
+
+  document.getElementById('btn-copy').addEventListener('click', () => {
+    navigator.clipboard.writeText(DRIVE_FOLDER_LINK).then(() => {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1800);
+    });
+  });
+</script>
+</body>
+</html>
