@@ -165,6 +165,25 @@
   .shutter:active{transform:scale(.94);}
   .hint{font-size:14px; color:var(--muted); margin-top:10px;}
 
+  .flip-btn{
+    position:absolute;
+    top:14px;
+    right:14px;
+    width:42px;height:42px;
+    border-radius:50%;
+    background:rgba(0,0,0,0.45);
+    border:1px solid rgba(255,255,255,0.4);
+    color:var(--white);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    backdrop-filter:blur(2px);
+  }
+  .flip-btn:active{transform:scale(.92);}
+  .flip-btn svg{width:20px;height:20px;}
+  video.mirror{transform:scaleX(-1);}
+
   /* Preview */
   #screen-preview{padding-top:26px;}
   #screen-preview .title-sm{
@@ -274,6 +293,9 @@
   <div class="screen" id="screen-camera">
     <div class="cam-frame">
       <video id="video" autoplay playsinline muted></video>
+      <button class="flip-btn" id="btn-flip" aria-label="Cambiar cámara">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      </button>
     </div>
     <div class="shutter" id="btn-shoot"></div>
     <div class="hint">Toca el círculo para capturar</div>
@@ -339,15 +361,18 @@
   const previewImg = document.getElementById('preview-img');
   let stream = null;
   let capturedDataUrl = null;
+  let facingMode = 'environment';
 
   async function startCamera(){
     document.getElementById('cam-error').style.display = 'none';
+    if(stream){ stream.getTracks().forEach(t => t.stop()); }
     try{
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1080 }, height: { ideal: 1440 } },
+        video: { facingMode: { ideal: facingMode }, width: { ideal: 1080 }, height: { ideal: 1440 } },
         audio: false
       });
       video.srcObject = stream;
+      video.classList.toggle('mirror', facingMode === 'user');
     }catch(err){
       document.getElementById('cam-error').style.display = 'block';
     }
@@ -366,11 +391,20 @@
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
+    if(facingMode === 'user'){
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     capturedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
     previewImg.src = capturedDataUrl;
     stopCamera();
     show('preview');
+  });
+
+  document.getElementById('btn-flip').addEventListener('click', () => {
+    facingMode = facingMode === 'environment' ? 'user' : 'environment';
+    startCamera();
   });
 
   document.getElementById('btn-retake').addEventListener('click', () => {
