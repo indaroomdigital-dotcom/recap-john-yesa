@@ -339,7 +339,6 @@
 </div>
 
 <script>
-  // ⚠️ Reemplaza esta URL por la de tu Web App de Google Apps Script (ver instrucciones)
   const UPLOAD_URL = "https://script.google.com/macros/s/AKfycbz459g2SrzrqSQ2zGEU3bE6olMHhdUP3YwoqoUmnbQBDnx0SAeO--qw2V3rDnbVXKbw/exec";
   const DRIVE_FOLDER_LINK = "https://drive.google.com/drive/folders/1cfIyqRi2w3jBKAxTDGBC0yE2NepEpt11";
 
@@ -439,7 +438,7 @@
       });
       show('success');
     }catch(err){
-      show('success'); // Apps Script + no-cors puede bloquear la lectura de respuesta aunque la subida sí funcione
+      show('success');
     }
   });
 
