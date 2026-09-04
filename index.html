@@ -165,10 +165,9 @@
   .shutter:active{transform:scale(.94);}
   .hint{font-size:14px; color:var(--muted); margin-top:10px;}
 
-  .flip-btn{
+  .corner-btn{
     position:absolute;
     top:14px;
-    right:14px;
     width:42px;height:42px;
     border-radius:50%;
     background:rgba(0,0,0,0.45);
@@ -180,8 +179,10 @@
     cursor:pointer;
     backdrop-filter:blur(2px);
   }
-  .flip-btn:active{transform:scale(.92);}
-  .flip-btn svg{width:20px;height:20px;}
+  .corner-btn:active{transform:scale(.92);}
+  .corner-btn svg{width:20px;height:20px;}
+  .back-btn{left:14px;}
+  .flip-btn{right:14px;}
   video.mirror{transform:scaleX(-1);}
 
   /* Preview */
@@ -286,14 +287,17 @@
       <button class="btn pill" id="btn-start">Tomar foto</button>
       <button class="btn pill alt" id="btn-gallery">Subir desde galería</button>
     </div>
-    <input type="file" id="file-input" accept="image/*" style="display:none">
+    <input type="file" id="file-input" accept="image/*" multiple style="display:none">
   </div>
 
   <!-- CAMERA -->
   <div class="screen" id="screen-camera">
     <div class="cam-frame">
       <video id="video" autoplay playsinline muted></video>
-      <button class="flip-btn" id="btn-flip" aria-label="Cambiar cámara">
+      <button class="corner-btn back-btn" id="btn-back" aria-label="Volver">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="corner-btn flip-btn" id="btn-flip" aria-label="Cambiar cámara">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
       </button>
     </div>
@@ -317,7 +321,7 @@
   <!-- UPLOADING -->
   <div class="screen" id="screen-uploading">
     <div class="spinner"></div>
-    <div class="title-sm">Guardando tu foto…</div>
+    <div class="title-sm" id="uploading-text">Guardando tu foto…</div>
   </div>
 
   <!-- SUCCESS -->
@@ -325,7 +329,7 @@
     <div class="check">
       <svg viewBox="0 0 24 24" fill="none" stroke="#6E7A52" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
     </div>
-    <div class="title">¡Foto subida!</div>
+    <div class="title" id="success-title">¡Foto subida!</div>
     <p>Gracias por estar con nosotros y por regalarnos también tu mirada de este día.</p>
     <p class="sub">Todas las fotos de nuestros invitados se están guardando aquí. Cuando quieras revivirlas, entra al enlace:</p>
     <div class="link-box">
@@ -406,6 +410,11 @@
     startCamera();
   });
 
+  document.getElementById('btn-back').addEventListener('click', () => {
+    stopCamera();
+    show('intro');
+  });
+
   document.getElementById('btn-retake').addEventListener('click', () => {
     show('camera');
     startCamera();
@@ -416,28 +425,65 @@
   });
 
   document.getElementById('file-input').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      capturedDataUrl = ev.target.result;
-      previewImg.src = capturedDataUrl;
-      show('preview');
-    };
-    reader.readAsDataURL(file);
+    const files = Array.from(e.target.files);
     e.target.value = '';
+    if(!files.length) return;
+
+    if(files.length === 1){
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        capturedDataUrl = ev.target.result;
+        previewImg.src = capturedDataUrl;
+        show('preview');
+      };
+      reader.readAsDataURL(files[0]);
+    }else{
+      uploadMultiple(files);
+    }
   });
+
+  function fileToDataUrl(file){
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => resolve(ev.target.result);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadMultiple(files){
+    show('uploading');
+    const uploadingText = document.getElementById('uploading-text');
+    let done = 0;
+    for(const file of files){
+      uploadingText.textContent = `Guardando foto ${done + 1} de ${files.length}…`;
+      try{
+        const dataUrl = await fileToDataUrl(file);
+        await fetch(UPLOAD_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ image: dataUrl })
+        });
+      }catch(err){ /* seguimos con las demás */ }
+      done++;
+    }
+    uploadingText.textContent = 'Guardando tu foto…';
+    document.getElementById('success-title').textContent = `¡${files.length} fotos subidas!`;
+    show('success');
+  }
 
   document.getElementById('btn-upload').addEventListener('click', async () => {
     show('uploading');
+    document.getElementById('uploading-text').textContent = 'Guardando tu foto…';
     try{
       await fetch(UPLOAD_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ image: capturedDataUrl })
       });
+      document.getElementById('success-title').textContent = '¡Foto subida!';
       show('success');
     }catch(err){
+      document.getElementById('success-title').textContent = '¡Foto subida!';
       show('success');
     }
   });
